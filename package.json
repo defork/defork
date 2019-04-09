@@ -1,0 +1,12 @@
+{
+  "name": "defork",
+  "version": "0.0.1",
+  "description": "Defork your Lambda projects for the commit history!",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "John O'Rourke",
+  "license": "ISC"
+}
