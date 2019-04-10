@@ -1,3 +1,4 @@
+const octokit = new require('@octokit/rest')();
 const express = require('express');
 const cors = require('cors');
 const server = express();
@@ -18,10 +19,18 @@ const corsOptions = {
 
 server.use(cors(corsOptions));
 server.use(express.json());
-server.use('/api', require('./api'));
 
 server.get('/', (req, res) => {
   res.status(200).json({ success: "You're not insane!" });
+});
+
+server.post('/api/defork/:name', async (req, res) => {
+  const { name } = req.params;
+  const response = await octokit.repos.listForUser({
+    username: name
+  });
+  const repos = response.data.filter(repo => repo.fork);
+  res.json({ repos });
 });
 
 const PORT = process.env.PORT || 8000;
