@@ -1,5 +1,13 @@
 # Game plan
 
+### To do:
+
+- Create GitHub App.
+- Get all auth set up.
+- Continue getting the rest of the logic built out for repo creation and imports!
+
+### Current flow:
+
 Manual:
 
 - Create a new organization (new name)
