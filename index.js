@@ -1,11 +1,17 @@
-const app = new require('@octokit/app')({
-  id: process.env.APP_ID,
-  privateKey: process.env.PRIVATE_KEY
-});
-const octokit = new require('@octokit/rest')();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const server = express();
+// const app = new require('@octokit/app')({
+//   id: process.env.APP_ID,
+//   privateKey: require('fs').readFileSync('private-key.pem')
+// });
+const Octokit = require('@octokit/rest').plugin(
+  require('@octokit/plugin-retry')
+);
+const octokit = Octokit({
+  auth: '' // needs a token
+});
 
 // for limiting API usage later on if needed
 const DEV_URLS = ['http://localhost:3000'];
@@ -30,42 +36,55 @@ server.get('/', (req, res) => {
 server.post('/api/defork/:name', async (req, res) => {
   const { name } = req.params;
   const { toOrg } = req.body;
+
+  const currentRepos = await octokit.paginate('GET /users/:username/repos', {
+    username: toOrg
+  });
+
+  const currentRepoNames = currentRepos.map(currRepo => currRepo.name);
+
   // works for users and orgs
-  const response = await octokit.repos.listForUser({
+  const data = await octokit.paginate('GET /users/:username/repos', {
     username: name
   });
 
   // all forks from supplied user/organization
-  const repos = response.data.filter(repo => repo.fork);
+  // and don't try to repeat any preexisting moved forks
+  const repos = data
+    .filter(repo => repo.fork)
+    .filter(repo => !currentRepoNames.includes(repo.name));
 
   const newRepos = [];
 
   repos.forEach(async repo => {
-    // for initializing new repos in organization
-    const response1 = await octokit.repos.createInOrg({
-      org: toOrg,
-      name: repo.name,
-      description: repo.description
-    });
+    await setTimeout(async () => {
+      // for initializing new repos in organization
+      const response1 = await octokit.repos.createInOrg({
+        org: toOrg,
+        name: repo.name,
+        description: repo.description || ''
+      });
 
-    console.log(response1);
+      // for importing into those new repos
+      // uses public preview https://developer.github.com/v3/previews/#source-import
+      const response2 = await octokit.request(
+        'PUT /repos/:owner/:repo/import',
+        {
+          headers: {
+            accept: 'application/vnd.github.barred-rock-preview'
+          },
+          owner: toOrg,
+          repo: repo.name,
+          vcs_url: repo.svn_url,
+          vcs: 'git',
+          mediaType: {
+            previews: ['barred-rock-preview']
+          }
+        }
+      );
 
-    // for importing into those new repos
-    // uses public preview https://developer.github.com/v3/previews/#source-import
-    const response2 = await octokit.request('PUT /repos/:owner/:repo/import', {
-      headers: {
-        accept: 'application/vnd.github.barred-rock-preview'
-      },
-      owner: toOrg,
-      repo: repo.name,
-      vcs_url: repo.svn_url,
-      vcs: 'git',
-      mediaType: {
-        previews: ['barred-rock-preview']
-      }
-    });
-
-    newRepos.push(response2.data);
+      newRepos.push(response2);
+    }, 10000);
   });
 
   res.json({ repos, newRepos });
