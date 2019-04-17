@@ -33,6 +33,8 @@ server.get('/', (req, res) => {
   res.status(200).json({ success: "You're not insane!" });
 });
 
+const timeout = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 server.post('/api/defork/:name', async (req, res) => {
   const { name } = req.params;
   const { toOrg } = req.body;
@@ -57,19 +59,25 @@ server.post('/api/defork/:name', async (req, res) => {
   const newRepos = [];
 
   repos.forEach(async repo => {
-    await setTimeout(async () => {
+    try {
       // for initializing new repos in organization
-      const response1 = await octokit.repos.createInOrg({
-        org: toOrg,
-        name: repo.name,
-        description: repo.description || ''
-      });
+      var response1 = await Promise.all([
+        octokit.repos.createInOrg({
+          org: toOrg,
+          name: repo.name,
+          description: repo.description || ''
+        }),
+        timeout(10000)
+      ]);
+    } catch (err) {
+      console.log('POST', { err });
+    }
 
+    try {
       // for importing into those new repos
       // uses public preview https://developer.github.com/v3/previews/#source-import
-      const response2 = await octokit.request(
-        'PUT /repos/:owner/:repo/import',
-        {
+      var response2 = await Promise.all([
+        octokit.request('PUT /repos/:owner/:repo/import', {
           headers: {
             accept: 'application/vnd.github.barred-rock-preview'
           },
@@ -80,11 +88,14 @@ server.post('/api/defork/:name', async (req, res) => {
           mediaType: {
             previews: ['barred-rock-preview']
           }
-        }
-      );
+        }),
+        timeout(10000)
+      ]);
+    } catch (err) {
+      console.log('PUT', { err });
+    }
 
-      newRepos.push(response2);
-    }, 10000);
+    newRepos.push(response2);
   });
 
   res.json({ repos, newRepos });
