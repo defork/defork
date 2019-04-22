@@ -39,6 +39,21 @@ server.post('/api/defork/:name', async (req, res) => {
   const { name } = req.params;
   const { toOrg } = req.body;
 
+  /* Lambda repo names change.
+    This isn't quite the solution I'm looking for.
+    Perhaps Lambda repo. names could be stored in a DB?
+    If that were the case, some of that work might need to be done manually.
+    I wonder, if this were used by a lot of people at the school,
+    if I could simply collect all of the repo. names added and 
+    add any that aren't currently in the DB. Using a hash function for this
+    would make sense.
+  */
+  const lambdaRepos = await octokit.paginate('GET /users/:username/repos', {
+    username: 'LambdaSchool'
+  });
+
+  const lambdaRepoNames = lambdaRepos.map(repo => repo.name);
+
   const currentRepos = await octokit.paginate('GET /users/:username/repos', {
     username: toOrg
   });
@@ -54,7 +69,10 @@ server.post('/api/defork/:name', async (req, res) => {
   // and don't try to repeat any preexisting moved forks
   const repos = data
     .filter(repo => repo.fork)
-    .filter(repo => !currentRepoNames.includes(repo.name));
+    .filter(
+      ({ name }) =>
+        lambdaRepoNames.includes(name) && !currentRepoNames.includes(name)
+    );
 
   const newRepos = [];
 
