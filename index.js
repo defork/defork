@@ -35,29 +35,18 @@ server.get('/', (req, res) => {
 
 const timeout = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-server.post('/api/defork/:name', async (req, res) => {
+server.post('/api/forks/:name', async (req, res) => {
   const { name } = req.params;
   const { toOrg } = req.body;
 
-  /* Lambda repo names change.
-    This isn't quite the solution I'm looking for.
-    Perhaps Lambda repo. names could be stored in a DB?
-    If that were the case, some of that work might need to be done manually.
-    I wonder, if this were used by a lot of people at the school,
-    if I could simply collect all of the repo. names added and 
-    add any that aren't currently in the DB. Using a hash function for this
-    would make sense.
-  */
   const lambdaRepos = await octokit.paginate('GET /users/:username/repos', {
     username: 'LambdaSchool'
   });
-
   const lambdaRepoNames = lambdaRepos.map(repo => repo.name);
 
   const currentRepos = await octokit.paginate('GET /users/:username/repos', {
     username: toOrg
   });
-
   const currentRepoNames = currentRepos.map(currRepo => currRepo.name);
 
   // works for users and orgs
@@ -67,19 +56,30 @@ server.post('/api/defork/:name', async (req, res) => {
 
   // all forks from supplied user/organization
   // and don't try to repeat any preexisting moved forks
-  const repos = data
+  const forks = data
     .filter(repo => repo.fork)
-    .filter(
-      ({ name }) =>
-        lambdaRepoNames.includes(name) && !currentRepoNames.includes(name)
-    );
+    .filter(({ name }) => !currentRepoNames.includes(name));
 
-  const newRepos = [];
+  // to separate definite forks to defork from candidates.
+  // for the FE to display candidate forks, for the user to select
+  const forkedLambdaRepos = [];
+  const maybeForkedLambdaRepos = [];
+  forks.forEach(repo => {
+    if (lambdaRepoNames.includes(repo.name)) {
+      forkedLambdaRepos.push(repo);
+    } else maybeForkedLambdaRepos.push(repo);
+  });
+
+  res.json({ lambdaRepoNames, maybeForkedLambdaRepos });
+});
+
+server.post('/api/defork/:toOrg', async (req, res) => {
+  const { repos, toOrg } = req.params;
 
   repos.forEach(async repo => {
     try {
       // for initializing new repos in organization
-      var response1 = await Promise.all([
+      await Promise.all([
         octokit.repos.createInOrg({
           org: toOrg,
           name: repo.name,
@@ -94,7 +94,7 @@ server.post('/api/defork/:name', async (req, res) => {
     try {
       // for importing into those new repos
       // uses public preview https://developer.github.com/v3/previews/#source-import
-      var response2 = await Promise.all([
+      await Promise.all([
         octokit.request('PUT /repos/:owner/:repo/import', {
           headers: {
             accept: 'application/vnd.github.barred-rock-preview'
@@ -112,11 +112,7 @@ server.post('/api/defork/:name', async (req, res) => {
     } catch (err) {
       console.log('PUT', { err });
     }
-
-    newRepos.push(response2);
   });
-
-  res.json({ repos, newRepos });
 });
 
 const PORT = process.env.PORT || 8000;
