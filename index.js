@@ -64,19 +64,21 @@ server.post('/api/forks/:name', async (req, res) => {
   // for the FE to display candidate forks, for the user to select
   const forkedLambdaRepos = [];
   const maybeForkedLambdaRepos = [];
-  forks.forEach(repo => {
-    if (lambdaRepoNames.includes(repo.name)) {
+  forks.forEach(({ name, description, svn_url }) => {
+    const repo = { name, description, svn_url };
+    if (lambdaRepoNames.includes(name)) {
       forkedLambdaRepos.push(repo);
     } else maybeForkedLambdaRepos.push(repo);
   });
 
-  res.json({ lambdaRepoNames, maybeForkedLambdaRepos });
+  res.json({ forkedLambdaRepos, maybeForkedLambdaRepos });
 });
 
 server.post('/api/defork/:toOrg', async (req, res) => {
-  const { repos, toOrg } = req.params;
+  const { toOrg } = req.params;
+  const { forks } = req.body;
 
-  repos.forEach(async repo => {
+  forks.forEach(async repo => {
     try {
       // for initializing new repos in organization
       await Promise.all([
