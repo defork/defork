@@ -1,8 +1,9 @@
 {
   "name": "defork",
-  "version": "0.0.1",
-  "description": "Defork your Lambda projects for the commit history!",
-  "main": "index.js",
+  "version": "0.0.2",
+  "description": "Defork your forked projects for the commit history!",
+  "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "dev": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,6 +20,6 @@
     "express": "^4.16.4"
   },
   "devDependencies": {
-    "nodemon": "^1.18.11"
+    "nodemon": "^2.0.19"
   }
 }

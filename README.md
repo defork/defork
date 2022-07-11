@@ -4,7 +4,7 @@
 
 - Utilize retry after header so as to not make unneeded requests
 - Get auth set up.
-- Build out FE for users.
+- Build out FE for users. (Might prefer making a native, non-web application for simplicity's sake.)
 
 ### Current flow:
 
