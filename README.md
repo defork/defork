@@ -1,3 +1,5 @@
+A tool for de-forking your forked repositories (primarily for organization and commit history).
+
 # Game plan
 
 ### To do:
