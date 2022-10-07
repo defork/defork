@@ -1,46 +1,54 @@
-import octokit from './octokit.js';
+import {
+	octokit,
+	currentRepoNames,
+	checkRateLimit,
+	constants
+} from './config/index.js';
 import { Router } from 'express';
 const router = Router();
 
 router.route('/:name').post(async (req, res) => {
-    const { name } = req.params;
-    const { toOrg, forkedFrom = 'bloominstituteoftechnology' } = req.body;
-    const GET_REPOS_URL = 'GET /users/:username/repos';
+	const { name } = req.params;
+	const { forkedFrom = 'bloominstituteoftechnology' } = req.body;
 
-    const reposToDefork = await octokit.paginate(GET_REPOS_URL, {
-        username: forkedFrom
-    });
-    const reposToDeforkNames = reposToDefork.map(repo => repo.name);
+	const isRateLimitHit = await checkRateLimit(res, 3);
+	if (isRateLimitHit) return;
 
-    // repos already in the organization for deforked repos
-    const currentRepos = await octokit.paginate(GET_REPOS_URL, {
-        username: toOrg
-    });
-    const currentRepoNames = currentRepos.map(currRepo => currRepo.name);
+	const { GET_REPOS_URL } = constants;
 
-    // works for users and orgs
-    const data = await octokit.paginate(GET_REPOS_URL, {
-        username: name
-    });
+	const reposToDeforkNames = {};
+	if (process.env.CHECK_FROM_ORG) {
+		const reposToDefork = await octokit.paginate(GET_REPOS_URL, {
+			username: forkedFrom
+		});
+		reposToDefork.forEach(repo => {
+			reposToDeforkNames[repo.name] = true;
+		});
+	}
 
-    // all forks from supplied user/organization
-    // and don't try to repeat any preexisting moved forks
-    const forks = data
-        .filter(repo => repo.fork)
-        .filter(({ name }) => !currentRepoNames.includes(name));
+	// works for users and orgs
+	const data = await octokit.paginate(GET_REPOS_URL, {
+		username: name
+	});
 
-    // to separate definite forks to defork from candidates.
-    // for the FE to display candidate forks, for the user to select
-    const forkedRepos = [];
-    const maybeForkedRepos = [];
-    forks.forEach(({ name, description, svn_url }) => {
-        const repo = { name, description, svn_url };
-        if (reposToDeforkNames.includes(name)) {
-            forkedRepos.push(repo);
-        } else maybeForkedRepos.push(repo);
-    });
+	// all forks from supplied user/organization
+	// and don't try to repeat any preexisting moved forks
+	const forks = data
+		.filter(repo => repo.fork)
+		.filter(({ name }) => !currentRepoNames[name]);
 
-    res.json({ forkedRepos, maybeForkedRepos });
+	// to separate definite forks to defork from candidates.
+	// for the FE to display candidate forks, for the user to select
+	const forkedRepos = [];
+	const maybeForkedRepos = [];
+	forks.forEach(({ name, description, svn_url }) => {
+		const repo = { name, description, svn_url };
+		if (reposToDeforkNames[name]) {
+			forkedRepos.push(repo);
+		} else maybeForkedRepos.push(repo);
+	});
+
+	res.json({ forkedRepos, maybeForkedRepos });
 });
 
 export default router;
