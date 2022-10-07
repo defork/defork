@@ -29,7 +29,7 @@ TO_ORG="new-org-name"
 # DELETE_OLD="true"
 ```
 
-To generate a token, go to your GitHub settings and click on 'Developer settings' in the sidebar. Then click on 'Personal access tokens' and click 'Generate new token'. Give it a name and select the 'repo' scope ('public_repo' is fine too depending on if you have privated forks you'd like to convert). Copy the token and paste it into your `.env` file.
+To generate a token, go to your GitHub settings and click on 'Developer settings' in the sidebar. Then click on 'Personal access tokens' and click 'Generate new token'. Give it a name and select the 'public_repo' scope ('repo' will pick up private forked repos as well, so only use it if that's the desired behavior). Copy the token and paste it into your `.env` file.
 
 - Run `npm install`
 - Run `npm start` to start the server
