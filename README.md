@@ -46,7 +46,7 @@ To generate a token, go to your GitHub settings and click on 'Developer settings
 - Make a request to `http://localhost:8000/api/defork`:
   ```json
   {
-  	"forks": [
+    "forks": [
       {
         "name": "repo-name",
         "svn_url": "https://github.com/yourUsername/repoName",
