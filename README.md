@@ -1,4 +1,4 @@
-A tool for de-forking your forked repositories (primarily for organization and commit history).
+A tool for de-forking your forked repositories (primarily for organization and maintaining commit history).
 
 Note that this tool is still currently being developed and is experimental! Use at your own risk.
 
